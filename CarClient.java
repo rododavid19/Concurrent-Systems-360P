@@ -1,7 +1,10 @@
+package hw3;
+
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.*;
 import java.util.Scanner;
-import java.io.*;
-import java.util.*;
 public class CarClient {
 
 
@@ -53,10 +56,6 @@ public class CarClient {
                   UDPClient client = new UDPClient();
                   client.sendRentRequest("rent" + customer + " " + carModel +  " " +carColor + " " + clientId);
               }
-
-
-
-
 
 
 
@@ -146,5 +145,53 @@ public class CarClient {
         public void close() {
             socket.close();
         }
+    }
+
+
+    public static class TCPClient{
+
+        private DatagramSocket socket;
+        private InetAddress address;
+        private byte[] buf;
+
+
+
+        public TCPClient() {
+            try {
+                socket = new DatagramSocket();
+            } catch (SocketException e) {
+                e.printStackTrace();
+            }
+            try {
+                address = InetAddress.getByName("localhost");
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void sendMessage(String msg) {
+            buf = msg.getBytes();
+
+            DatagramPacket sPacket = new DatagramPacket(buf, buf.length, address, 4445);
+            try {
+                socket.send(sPacket);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            DatagramPacket rPacket = new DatagramPacket(buf, buf.length);
+            try {
+                socket.receive(rPacket);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            String received = new String(rPacket.getData(), 0, rPacket.getLength());
+
+            System.out.println("Received from Server:" + received);
+
+        }
+
+
+
+
     }
 }

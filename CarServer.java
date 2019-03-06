@@ -1,10 +1,15 @@
+package hw3;
+
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class CarServer {
   static String[] car_model;
@@ -24,9 +29,6 @@ public class CarServer {
             rentToCustomer(info);
             writeToClientLog(info);
         }
-
-
-
     }
 
     synchronized static boolean isInventoryAvailable(String[] item ){
@@ -53,9 +55,6 @@ public class CarServer {
     }
 
 
-
-
-
     public static void main (String[] args) {
     int tcpPort;
     int udpPort;
@@ -71,8 +70,6 @@ public class CarServer {
     StringBuilder carModel = new StringBuilder();
     StringBuilder carColor = new StringBuilder();
     StringBuilder cartCount = new StringBuilder();
-
-
 
 
     try {
@@ -136,16 +133,11 @@ public class CarServer {
 
 
 
-
-
     // parse the inventory file
 
 
     // TODO: handle request from clients
   }
-
-
-
 
 
   public static class UDPServer extends Thread {
@@ -183,11 +175,6 @@ public class CarServer {
           rentRequest(received);         // TODO: add service detection here then call
 
 
-
-
-
-
-
         if (received.equals("end")) {
           running = false;
           continue;
@@ -201,9 +188,6 @@ public class CarServer {
       socket.close();
     }
   }
-
-
-
 
 
   static class serviceRecord{
@@ -223,12 +207,42 @@ public class CarServer {
 
 
 
+      public static class TCPServer extends Thread{
 
-    public void TCP_server(){
+          private DatagramSocket socket;
+          private boolean running;
+          private byte[] buf = new byte[256];
+
+
+          ExecutorService executor = Executors.newFixedThreadPool(30);
+
+
+          TCPServer(){
+              try {
+                  socket = new DatagramSocket(4445);
+
+              } catch (SocketException e) {
+                  e.printStackTrace();
+              }
+          }
 
 
 
-    }
+
+
+          public void run() {
+
+
+
+
+
+
+          }
+
+
+
+
+      }
 
 
   }

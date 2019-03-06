@@ -1,3 +1,5 @@
+package hw3;
+
 public class inputHandler {
 
     // setmode: first word match, next is data
@@ -8,11 +10,28 @@ public class inputHandler {
     //`<car-brand> <color> <quantity>'. Note that even if all cars of a particular brand and color
     //are rented out, you should print the car brand and color with quantity 0.
 
+
+    /*
+
+
+command file:
+setmode T
+rent Mike “Ford” “black” rent Jack “Toyota” “blue” rent Lucy “Toyota” “blue” list Jack
+list Lucy
+return 1
+inventory
+exit
+
+     */
+
     // TODO: TCP will instantiate a thread then run the handler for each of its clients,
 
     // TODO: UDP will serve one client at the time.
 
     // tODO: UDP/TCP will run simultaneously. Make two Classes. One for servers to delegate, another to control the inventor to prevent illegal R/Ws
+
+
+
 
 
 
