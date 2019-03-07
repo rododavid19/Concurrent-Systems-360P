@@ -23,6 +23,7 @@ public class CarClient {
     hostAddress = "localhost";
     tcpPort = 7000;// hardcoded -- must match the server's tcp port
     udpPort = 8000;// hardcoded -- must match the server's udp port
+    UDPClient client = null;
 
     try {
         Scanner sc = new Scanner(new FileReader(commandFile));
@@ -34,43 +35,66 @@ public class CarClient {
           String[] tokens = cmd.split(" ");
 
           if (tokens[0].equals("setmode")) {
-            // TODO: set the mode of communication for sending commands to the server
 
-             if(tokens[1].equals("T")){         // TODO: CHANGE LETTER TO U
+
+             if(tokens[1].equals("U")){
                 flagUDP = true;
+                flagTCP = false;
              }
+              if(tokens[1].equals("T")){
+                  flagTCP = true;
+                  flagUDP = false;
+              }
           }
           else if (tokens[0].equals("rent")) {
-            // TODO: send appropriate command to the server and display the
-            // appropriate responses form the server
-
 
               String customer = tokens[1].replace("\"", "") ;
               String carModel = tokens[2].replace("\"", "");
               String carColor = tokens[3].replace("\"" , "") ;
 
               if(flagUDP){
-                  UDPClient client = new UDPClient();
-                  client.sendRentRequest("rent" + customer + " " + carModel +  " " +carColor + " " + clientId);
+                  client = new UDPClient();
+                  client.sendRequest(" rent " + customer + " " + carModel +  " " +carColor + " " + clientId);
+              }
+
+              if(flagTCP){
+                //  client = new ();
+                  client.sendRequest(" rent " + customer + " " + carModel +  " " +carColor + " " + clientId);
+              }
+
+          } else if (tokens[0].equals("return")) {
+
+              String customer = tokens[1].replace("\"", "") ;
+              if(flagUDP){
+                  client = new UDPClient();
+                  client.sendRequest(" return " + customer + " " + clientId);
+              }
+
+          } else if (tokens[0].equals("inventory")) {
+
+              if(flagUDP){
+                  client = new UDPClient();
+                  client.sendRequest(" inventory " +  " " + clientId);
+              }
+
+          } else if (tokens[0].equals("list")) {
+
+              String customer = tokens[1].replace("\"", "") ;
+
+
+              if(flagUDP){
+                  client = new UDPClient();
+                  client.sendRequest(" list " + customer + " " + clientId);
+
               }
 
 
-
-
-
-
-
-          } else if (tokens[0].equals("return")) {
-            // TODO: send appropriate command to the server and display the
-            // appropriate responses form the server
-          } else if (tokens[0].equals("inventory")) {
-            // TODO: send appropriate command to the server and display the
-            // appropriate responses form the server
-          } else if (tokens[0].equals("list")) {
-            // TODO: send appropriate command to the server and display the
-            // appropriate responses form the server
           } else if (tokens[0].equals("exit")) {
-            // TODO: send appropriate command to the server 
+
+              if(flagUDP){
+                  client.sendRequest(" exit ");
+              }
+
           } else {
             System.out.println("ERROR: No such command");
           }
@@ -85,7 +109,8 @@ public class CarClient {
         private DatagramSocket socket;
         private InetAddress address;
 
-        private byte[] buf;
+        private byte[] buf = new byte[1024];
+
 
         public UDPClient() {
             try {
@@ -100,44 +125,38 @@ public class CarClient {
             }
         }
 
-        public String sendEcho(String msg) {
-            buf = msg.getBytes();
-            DatagramPacket packet
-                    = new DatagramPacket(buf, buf.length, address, 4445);
-            try {
-                socket.send(packet);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            packet = new DatagramPacket(buf, buf.length);
-            try {
-                socket.receive(packet);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            String received = new String(
-                    packet.getData(), 0, packet.getLength());
-            return received;
-        }
 
-        public String sendRentRequest(String msg) {
+        public String sendRequest(String msg) {
             buf = msg.getBytes();
 
-            DatagramPacket packet
-                    = new DatagramPacket(buf, buf.length, address, 4445);
+            DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 4445);
             try {
-                socket.send(packet);
+                socket.send(packet);            // SENDS CUSTOMER DESIRE
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            packet = new DatagramPacket(buf, buf.length);
             try {
-                socket.receive(packet);
+                buf = "                                                                                                                                                                                                                                                                                        ".getBytes();   // TODO: how to assign large empty buf
+                packet = new DatagramPacket(buf, buf.length, address, 4445);
+               socket.receive(packet);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            String received = new String(
-                    packet.getData(), 0, packet.getLength());
+
+            String received = new String(packet.getData(), 0, packet.getLength());
+
+            try {
+                String[] responseThenID = received.split("//");
+                PrintWriter writer = new PrintWriter(new FileWriter("outTEST_" +  responseThenID[1] + ".txt", true));
+                responseThenID[0] = responseThenID[0].trim();
+                writer.println(responseThenID[0]);
+                writer.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
             return received;
         }
 
@@ -147,4 +166,67 @@ public class CarClient {
             socket.close();
         }
     }
+
+
+
+    public static class TCPCLient {
+        private DatagramSocket socket;
+        private InetAddress address;
+
+        private byte[] buf = new byte[1024];
+
+
+        public TCPCLient() {
+            try {
+                socket = new DatagramSocket();
+            } catch (SocketException e) {
+                e.printStackTrace();
+            }
+            try {
+                address = InetAddress.getByName("localhost");
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        public String sendRequest(String msg) {
+            buf = msg.getBytes();
+
+            DatagramPacket packet = new DatagramPacket(buf, buf.length, address, 4445);
+            try {
+                socket.send(packet);            // SENDS CUSTOMER DESIRE
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                buf = "                                                                                                                                                                                                                                                                                        ".getBytes();   // TODO: how to assign large empty buf
+                packet = new DatagramPacket(buf, buf.length, address, 4445);
+                socket.receive(packet);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            String received = new String(packet.getData(), 0, packet.getLength());
+
+            try {
+                String[] responseThenID = received.split("//");
+                PrintWriter writer = new PrintWriter(new FileWriter("outTEST_" + responseThenID[1] + ".txt", true));
+                responseThenID[0] = responseThenID[0].trim();
+                writer.println(responseThenID[0]);
+                writer.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return received;
+        }
+
+    }
+
+
+
+
 }

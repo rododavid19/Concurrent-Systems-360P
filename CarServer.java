@@ -1,7 +1,4 @@
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.concurrent.locks.Lock;
@@ -13,44 +10,114 @@ public class CarServer {
   static ArrayList<serviceRecord> customer_records = new ArrayList<>();
   static int car_ticket;
   static String logMessage;
-  static serviceRecord c;
+  static int recordID = 1;
 
 
     public synchronized static void rentRequest(String data){
-        data = data.replace("rent", "" );
+        data = data.replace(" rent ", "" );
         String[] info = data.split( " ");                   // TODO: consider making these static global??
 
         if(isInventoryAvailable(info)){
             rentToCustomer(info);
-            writeToClientLog(info);
+            logMessage ="Your request has been approved, " + customer_records.get(customer_records.size()-1).recordID + " " + info[0] + " \"" + info[1] + "\" \"" + info[2] + "\"" + "//" + info[3];
+          //  recordID++;
+            System.out.println(logMessage);
         }
 
 
 
     }
 
-    synchronized static boolean isInventoryAvailable(String[] item ){
+    static synchronized void listCustomerInfo(String data){
+
+        data = data.replace(" list ", "" );
+        String info[] = data.split(" ");
+
+        logMessage = "";
+
+
+        for ( serviceRecord c: customer_records) {
+
+            if(c.customerName.equals(info[0])){
+
+                logMessage = logMessage + c.recordID + " \"" +c.carModel+ "\" \"" + c.carColor + "\"" + "//" + info[1];
+                System.out.println(logMessage);
+            }
+
+        }
+
+    }
+
+    synchronized static boolean isInventoryAvailable(String[] info ){
 
      for(int i = 0; i <car_model.length; i++){
-         if(item[1].equals(car_model[i]) && item[2].equals(car_color[i]) && car_count[i] > 0){
+         if(info[1].equals(car_model[i]) && info[2].equals(car_color[i]) && car_count[i] > 0){
              car_ticket =  i;
 
             return true;
          }
      }
 
+     logMessage ="Request Failed - We do not have this car//" + info[3];
+
         return false;
     }
 
     synchronized static void rentToCustomer(String[] info){
-        customer_records.add(new serviceRecord( info[0], info[1], info[2], info[3] ) );
 
+        //TODO: add support for existing customers and add to count appropriately, from sting to int and backwards
+
+        customer_records.add(new serviceRecord( info[0], info[1], info[2], recordID ) );
+        recordID++;
         car_count[car_ticket]--;
     }
 
-    static void writeToClientLog(String[] item){
+    static synchronized void returnCar(String data){
+
+        data = data.replace(" return ", "" );
+        String info[] = data.split(" ");
+
+        for ( serviceRecord s: customer_records) {
+            if(s.recordID == Integer.parseInt(info[0])){
+
+                logMessage = info[0] + " is returned" + "//" + info[0];
+
+                for(int i =0; i < car_model.length; i++){
+
+                    if(s.carModel.equals(car_model[i])){
+                        car_count[i]++;
+
+                    }
+
+                }
+
+
+                return;
+
+            }
+        }
+
+
+        logMessage = info[0] +" not found, no such rental record";
+    }
+
+    static synchronized void listInventory(String data){
+
+        data = data.replace(" inventory ", "" );
+        String info[] = data.split(" ");
+
+        logMessage = "";
+
+        for ( int i = 0; i < car_model.length; i++){
+            logMessage =  logMessage + "\"" + car_model[i] +"\" \"" + car_color[i] + "\" " + car_count[i] + "\n";
+        }
+
+        logMessage = logMessage + "//" + info[1];
 
     }
+
+
+
 
 
 
@@ -152,7 +219,8 @@ public class CarServer {
 
     private DatagramSocket socket;
     private boolean running;
-    private byte[] buf = new byte[256];
+    private byte[] buf = new byte[1024];
+    public String function;
 
     public UDPServer() {
       try {
@@ -166,8 +234,7 @@ public class CarServer {
       running = true;
 
       while (running) {
-        DatagramPacket packet
-                = new DatagramPacket(buf, buf.length);
+        DatagramPacket packet = new DatagramPacket(buf, buf.length);
         try {
           socket.receive(packet);
 
@@ -177,10 +244,20 @@ public class CarServer {
 
         InetAddress address = packet.getAddress();
         int port = packet.getPort();
-        packet = new DatagramPacket(buf, buf.length, address, port);
+
+        // TODO: create thread to handle rentRequests;
+
+
         String received = new String(packet.getData(), 0, packet.getLength());
 
-          rentRequest(received);         // TODO: add service detection here then call
+        if(received.contains(" rent ")){ rentRequest(received); }
+        if(received.contains(" list ")){ listCustomerInfo(received);  }
+        if(received.contains(" return ")){ returnCar(received);  }
+        if(received.contains(" inventory ")){ listInventory(received);  }
+
+        byte[] log = logMessage.getBytes();
+        packet.setData(log, 0, log.length);
+        boolean test= false;
 
 
 
@@ -188,7 +265,10 @@ public class CarServer {
 
 
 
-        if (received.equals("end")) {
+
+
+
+        if (received.contains(" exit ")) {
           running = false;
           continue;
         }
@@ -198,38 +278,95 @@ public class CarServer {
           e.printStackTrace();
         }
       }
-      socket.close();
+   //   socket.close();
     }
   }
 
 
 
 
+    public static class TCPServer extends Thread {
 
-  static class serviceRecord{
+        private ServerSocket welcomeSocket;
+        private boolean running;
+        private byte[] buf = new byte[1024];
+        private  String clientMessage;
+        private  Socket reciever;
+
+        public TCPServer() {
+            try {
+                welcomeSocket = new ServerSocket(6789);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void run() {
+            running = true;
+
+            while (running) {
+
+                try {
+                     reciever  = welcomeSocket.accept();
+                    BufferedReader inFromClient = new BufferedReader(new InputStreamReader(reciever.getInputStream()));
+                    DataOutputStream outToClient = new DataOutputStream(reciever.getOutputStream());
+                    clientMessage = inFromClient.readLine();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+
+                System.out.println("Received: " + clientMessage);
+              //  capitalizedSentence = clientSentence.toUpperCase() + 'n';
+              //  outToClient.writeBytes(capitalizedSentence);
+
+                if(clientMessage.contains(" rent ")){ rentRequest(clientMessage); }
+                if(clientMessage.contains(" list ")){ listCustomerInfo(clientMessage);  }
+                if(clientMessage.contains(" return ")){ returnCar(clientMessage);  }
+                if(clientMessage.contains(" inventory ")){ listInventory(clientMessage);  }
+
+                byte[] log = logMessage.getBytes();
+
+
+
+
+
+
+
+
+
+
+
+                if (clientMessage.contains(" exit ")) {
+                    running = false;
+                    continue;
+                }
+
+            }
+            //   socket.close();
+        }
+    }
+
+
+    static class serviceRecord{
+
+      public serviceRecord(String customerName, String carModel, String carColor, int recordID) {
+          this.customerName = customerName;
+          this.carModel = carModel;
+          this.carColor = carColor;
+          this.recordID = recordID;
+      }
 
       String customerName;
       String carModel;
       String carColor;
-      String clientId;
+      int   recordID;
+
+      public void addCar( String[] info){
 
 
-      public serviceRecord(String customerName, String carModel, String carColor, String clientId) {
-          this.customerName = customerName;
-          this.carModel = carModel;
-          this.carColor = carColor;
-          this.clientId = clientId;
       }
-
-
-
-
-    public void TCP_server(){
-
-
-
-    }
-
 
   }
 
